@@ -250,6 +250,9 @@ func postLivecommentHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	ownerID := userIDByLiveStreamMap.Get(livecommentModel.LivestreamID)
+	tipsCountMap.Add(*ownerID, livecommentModel.Tip)
+
 	return c.JSON(http.StatusCreated, livecomment)
 }
 
