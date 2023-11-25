@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -106,17 +107,38 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.File(fallbackImage)
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
+
+	i := iconMap.Get(user.ID)
+	if i != nil {
+		image = *i
+	}
+	// if image == nil {
+	// 	image, err = os.ReadFile("/home/isucon/webapp/icon/" + strconv.Itoa(int(user.ID)))
+	// 	if err != nil {
+	// 		fmt.Println("NOOOOOOOOOOO, read icon error", err)
+	// 	} else {
+	// 		fmt.Println("YEEEEEEE, read icon success")
+	// 	}
+	// }
+
+	if image == nil {
+		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return c.File(fallbackImage)
+			} else {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
+			}
 		}
 	}
 
 	hash := sha256.Sum256(image)
 	if iconHash != "" && iconHash == fmt.Sprintf("\"%x\"", hash) {
 		return c.NoContent(http.StatusNotModified)
+	}
+
+	err = os.WriteFile("/home/isucon/webapp/icon/"+strconv.Itoa(int(user.ID)), image, 0666)
+	if err != nil {
+		fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
 	}
 
 	return c.Blob(http.StatusOK, "image/jpeg", image)
@@ -163,6 +185,13 @@ func postIconHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
+
+	// err = os.WriteFile("/home/isucon/webapp/icon/"+strconv.Itoa(int(userID)), req.Image, 0666)
+	// if err != nil {
+	// 	fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
+	// }
+
+	iconMap.Add(userID, &req.Image)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,

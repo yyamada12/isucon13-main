@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -24,6 +25,35 @@ import (
 
 	_ "net/http/pprof"
 )
+
+type SyncMap[T any] struct {
+	m  map[int64]*T
+	mu sync.RWMutex
+}
+
+func NewSyncMap[T any]() *SyncMap[T] {
+	return &SyncMap[T]{m: map[int64]*T{}}
+}
+
+func (sm *SyncMap[T]) Add(key int64, value *T) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m[key] = value
+}
+
+func (sm *SyncMap[T]) Get(key int64) *T {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.m[key]
+}
+
+func (sm *SyncMap[T]) Clear() {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m = map[int64]*T{}
+}
+
+var iconMap = NewSyncMap[[]byte]()
 
 const (
 	listenPort                     = 8080
@@ -124,6 +154,15 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", string(out))
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
+
+	// if err := os.RemoveAll("/home/isucon/webapp/icon/"); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to remove directory: "+err.Error())
+	// }
+	// if err := os.Mkdir("/home/isucon/webapp/icon/", 0755); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to create directory: "+err.Error())
+	// }
+
+	iconMap.Clear()
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
