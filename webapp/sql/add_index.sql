@@ -1,0 +1,1 @@
+CREATE INDEX idx_reactions_livestream_id ON reactions (livestream_id);
