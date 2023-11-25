@@ -26,6 +26,11 @@ import (
 	_ "net/http/pprof"
 )
 
+type Icon struct {
+	data []byte
+	hash [32]byte
+}
+
 type SyncMap[T any] struct {
 	m  map[int64]*T
 	mu sync.RWMutex
@@ -53,7 +58,7 @@ func (sm *SyncMap[T]) Clear() {
 	sm.m = map[int64]*T{}
 }
 
-var iconMap = NewSyncMap[[]byte]()
+var iconMap = NewSyncMap[Icon]()
 var userMap = NewSyncMap[UserModel]()
 
 func initCache() {

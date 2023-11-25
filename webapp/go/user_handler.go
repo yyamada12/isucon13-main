@@ -107,10 +107,12 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	var image []byte
+	var hash [32]byte
 
 	i := iconMap.Get(user.ID)
 	if i != nil {
-		image = *i
+		image = i.data
+		hash = i.hash
 	}
 	// if image == nil {
 	// 	image, err = os.ReadFile("/home/isucon/webapp/icon/" + strconv.Itoa(int(user.ID)))
@@ -129,9 +131,9 @@ func getIconHandler(c echo.Context) error {
 				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
 			}
 		}
+		hash = sha256.Sum256(image)
 	}
 
-	hash := sha256.Sum256(image)
 	if iconHash != "" && iconHash == fmt.Sprintf("\"%x\"", hash) {
 		return c.NoContent(http.StatusNotModified)
 	}
@@ -191,7 +193,7 @@ func postIconHandler(c echo.Context) error {
 	// 	fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
 	// }
 
-	iconMap.Add(userID, req.Image)
+	iconMap.Add(userID, Icon{data: req.Image, hash: sha256.Sum256(req.Image)})
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
@@ -446,9 +448,11 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	}
 
 	var image []byte
+	var hash [32]byte
 	i := iconMap.Get(userModel.ID)
 	if i != nil {
-		image = *i
+		image = i.data
+		hash = i.hash
 	}
 	if len(image) == 0 {
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
@@ -460,8 +464,8 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 				return User{}, err
 			}
 		}
+		hash = sha256.Sum256(image)
 	}
-	iconHash := sha256.Sum256(image)
 
 	user := User{
 		ID:          userModel.ID,
@@ -472,7 +476,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 			ID:       themeModel.ID,
 			DarkMode: themeModel.DarkMode,
 		},
-		IconHash: fmt.Sprintf("%x", iconHash),
+		IconHash: fmt.Sprintf("%x", hash),
 	}
 
 	return user, nil
