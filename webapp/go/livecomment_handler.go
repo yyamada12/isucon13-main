@@ -197,10 +197,12 @@ func postLivecommentHandler(c echo.Context) error {
 	}
 
 	// スパム判定
-	var ngwords []*NGWord
-	if err := tx.SelectContext(ctx, &ngwords, "SELECT id, user_id, livestream_id, word FROM ng_words WHERE user_id = ? AND livestream_id = ?", livestreamModel.UserID, livestreamModel.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
-	}
+	// var ngwords []*NGWord
+	// if err := tx.SelectContext(ctx, &ngwords, "SELECT id, user_id, livestream_id, word FROM ng_words WHERE user_id = ? AND livestream_id = ?", livestreamModel.UserID, livestreamModel.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+	// }
+
+	ngwords := ownersNGWordsMap.Get(livestreamModel.ID)
 
 	var hitSpam int
 	for _, ngword := range ngwords {
@@ -370,25 +372,29 @@ func moderateHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "A streamer can't moderate livestreams that other streamers own")
 	}
 
-	rs, err := tx.NamedExecContext(ctx, "INSERT INTO ng_words(user_id, livestream_id, word, created_at) VALUES (:user_id, :livestream_id, :word, :created_at)", &NGWord{
+	ng := NGWord{
 		UserID:       int64(userID),
 		LivestreamID: int64(livestreamID),
 		Word:         req.NGWord,
 		CreatedAt:    time.Now().Unix(),
-	})
+	}
+	rs, err := tx.NamedExecContext(ctx, "INSERT INTO ng_words(user_id, livestream_id, word, created_at) VALUES (:user_id, :livestream_id, :word, :created_at)", &ng)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new NG word: "+err.Error())
 	}
+
+	ownersNGWordsMap.Add(ng.LivestreamID, ng)
 
 	wordID, err := rs.LastInsertId()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted NG word id: "+err.Error())
 	}
 
-	var ngwords []*NGWord
-	if err := tx.SelectContext(ctx, &ngwords, "SELECT * FROM ng_words WHERE livestream_id = ?", livestreamID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
-	}
+	// var ngwords []*NGWord
+	// if err := tx.SelectContext(ctx, &ngwords, "SELECT * FROM ng_words WHERE livestream_id = ?", livestreamID); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+	// }
+	ngwords := ownersNGWordsMap.Get(ng.LivestreamID)
 
 	// NGワードにヒットする過去の投稿も全削除する
 	for _, ngword := range ngwords {

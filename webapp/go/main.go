@@ -5,6 +5,8 @@ package main
 
 import (
 	"crypto/sha256"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -124,6 +126,7 @@ var userReactionsCountMap = NewCountMap()
 var userTipsCountMap = NewCountMap()
 var liveReactionsCountMap = NewCountMap()
 var liveTipsCountMap = NewCountMap()
+var ownersNGWordsMap = NewSyncListMap[NGWord]()
 
 func initCache() {
 	loadFllbackImageHash()
@@ -144,6 +147,27 @@ func initCache() {
 	userTipsCountMap.Clear()
 	liveTipsCountMap.Clear()
 	loadTipsCount()
+	ownersNGWordsMap.Clear()
+	loadOwnersNGWords()
+}
+
+func loadOwnersNGWords() {
+	var livestreamModels []LivestreamModel
+	if err := dbConn.Select(&livestreamModels, "SELECT * FROM livestreams"); err != nil {
+		log.Fatalf("failed to load livestreams: %+v", err)
+	}
+
+	for _, livestreamModel := range livestreamModels {
+		// スパム判定
+		var ngwords []*NGWord
+		if err := dbConn.Select(&ngwords, "SELECT id, user_id, livestream_id, word FROM ng_words WHERE user_id = ? AND livestream_id = ?", livestreamModel.UserID, livestreamModel.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Fatalf("failed to load ngwords: %+v", err)
+		}
+
+		for _, ngword := range ngwords {
+			ownersNGWordsMap.Add(ngword.LivestreamID, *ngword)
+		}
+	}
 }
 
 func loadFllbackImageHash() {
