@@ -312,6 +312,8 @@ func registerHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	themeMap.Add(userModel.ID, themeModel)
+
 	return c.JSON(http.StatusCreated, user)
 }
 
@@ -443,8 +445,14 @@ func verifyUserSession(c echo.Context) error {
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
 	themeModel := ThemeModel{}
-	if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
-		return User{}, err
+
+	cachedTheme := themeMap.Get(userModel.ID)
+	if cachedTheme != nil {
+		themeModel = *cachedTheme
+	} else {
+		if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
 	}
 
 	var image []byte

@@ -89,6 +89,7 @@ func (sm *SyncMap[T]) Clear() {
 var fallbackImageHash [32]byte
 var iconMap = NewSyncMap[Icon]()
 var userMap = NewSyncMap[UserModel]()
+var themeMap = NewSyncMap[ThemeModel]()
 var livestreamTagsMap = NewSyncListMap[Tag]()
 
 func initCache() {
@@ -96,6 +97,8 @@ func initCache() {
 	iconMap.Clear()
 	userMap.Clear()
 	loadUser()
+	themeMap.Clear()
+	loadTheme()
 	livestreamTagsMap.Clear()
 	loadTags()
 }
@@ -117,6 +120,17 @@ func loadUser() {
 	}
 	for _, u := range users {
 		userMap.Add(u.ID, u)
+	}
+}
+
+func loadTheme() {
+	themes := []ThemeModel{}
+	if err := dbConn.Select(&themes, "SELECT * FROM themes"); err != nil {
+		log.Printf("failed to load themes: %+v", err)
+		return
+	}
+	for _, t := range themes {
+		themeMap.Add(t.UserID, t)
 	}
 }
 
