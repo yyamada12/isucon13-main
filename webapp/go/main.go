@@ -32,6 +32,33 @@ type Icon struct {
 	hash [32]byte
 }
 
+type SyncListMap[T any] struct {
+	m  map[int64][]T
+	mu sync.RWMutex
+}
+
+func NewSyncListMap[T any]() *SyncListMap[T] {
+	return &SyncListMap[T]{m: map[int64][]T{}}
+}
+
+func (sm *SyncListMap[T]) Add(key int64, value T) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m[key] = append(sm.m[key], value)
+}
+
+func (sm *SyncListMap[T]) Get(key int64) []T {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.m[key]
+}
+
+func (sm *SyncListMap[T]) Clear() {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m = map[int64][]T{}
+}
+
 type SyncMap[T any] struct {
 	m  map[int64]*T
 	mu sync.RWMutex
@@ -62,12 +89,15 @@ func (sm *SyncMap[T]) Clear() {
 var fallbackImageHash [32]byte
 var iconMap = NewSyncMap[Icon]()
 var userMap = NewSyncMap[UserModel]()
+var livestreamTagsMap = NewSyncListMap[Tag]()
 
 func initCache() {
 	loadFllbackImageHash()
 	iconMap.Clear()
 	userMap.Clear()
 	loadUser()
+	livestreamTagsMap.Clear()
+	loadTags()
 }
 
 func loadFllbackImageHash() {
@@ -87,6 +117,24 @@ func loadUser() {
 	}
 	for _, u := range users {
 		userMap.Add(u.ID, u)
+	}
+}
+
+type LiveTag struct {
+	ID           int64  `db:"id" json:"id"`
+	LivestreamID int64  `db:"livestream_id" json:"livestream_id"`
+	TagID        int64  `db:"tag_id" json:"tag_id"`
+	TagName      string `db:"tag_name" json:"tag_name"`
+}
+
+func loadTags() {
+	var tags []*LiveTag
+	if err := dbConn.Select(&tags, "SELECT a.*, b.name as tag_name FROM livestream_tags a JOIN tags b ON a.tag_id = b.id"); err != nil {
+		log.Fatalf("failed to load livestream_tags: %+v", err)
+		return
+	}
+	for _, t := range tags {
+		livestreamTagsMap.Add(t.LivestreamID, Tag{t.TagID, t.TagName})
 	}
 }
 
