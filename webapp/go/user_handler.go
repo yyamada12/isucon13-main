@@ -121,7 +121,7 @@ func getIconHandler(c echo.Context) error {
 	// 	}
 	// }
 
-	if image == nil {
+	if len(image) == 0 {
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return c.File(fallbackImage)
@@ -191,7 +191,7 @@ func postIconHandler(c echo.Context) error {
 	// 	fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
 	// }
 
-	iconMap.Add(userID, &req.Image)
+	iconMap.Add(userID, req.Image)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
@@ -218,12 +218,17 @@ func getMeHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	userModel := UserModel{}
-	err = tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE id = ?", userID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
-	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
+	cached := userMap.Get(userID)
+	if cached != nil {
+		userModel = *cached
+	} else {
+		err = tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE id = ?", userID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
+		}
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
+		}
 	}
 
 	user, err := fillUserResponse(ctx, tx, userModel)
@@ -282,6 +287,7 @@ func registerHandler(c echo.Context) error {
 	}
 
 	userModel.ID = userID
+	userMap.Add(userModel.ID, userModel)
 
 	themeModel := ThemeModel{
 		UserID:   userID,
@@ -444,7 +450,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	if i != nil {
 		image = *i
 	}
-	if image == nil {
+	if len(image) == 0 {
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return User{}, err

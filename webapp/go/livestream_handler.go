@@ -486,8 +486,14 @@ func getLivecommentReportsHandler(c echo.Context) error {
 
 func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel LivestreamModel) (Livestream, error) {
 	ownerModel := UserModel{}
-	if err := tx.GetContext(ctx, &ownerModel, "SELECT * FROM users WHERE id = ?", livestreamModel.UserID); err != nil {
-		return Livestream{}, err
+	cached := userMap.Get(livestreamModel.UserID)
+	if cached != nil {
+		ownerModel = *cached
+	} else {
+
+		if err := tx.GetContext(ctx, &ownerModel, "SELECT * FROM users WHERE id = ?", livestreamModel.UserID); err != nil {
+			return Livestream{}, err
+		}
 	}
 	owner, err := fillUserResponse(ctx, tx, ownerModel)
 	if err != nil {

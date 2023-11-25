@@ -35,10 +35,10 @@ func NewSyncMap[T any]() *SyncMap[T] {
 	return &SyncMap[T]{m: map[int64]*T{}}
 }
 
-func (sm *SyncMap[T]) Add(key int64, value *T) {
+func (sm *SyncMap[T]) Add(key int64, value T) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-	sm.m[key] = value
+	sm.m[key] = &value
 }
 
 func (sm *SyncMap[T]) Get(key int64) *T {
@@ -54,6 +54,24 @@ func (sm *SyncMap[T]) Clear() {
 }
 
 var iconMap = NewSyncMap[[]byte]()
+var userMap = NewSyncMap[UserModel]()
+
+func initCache() {
+	iconMap.Clear()
+	userMap.Clear()
+	loadUser()
+}
+
+func loadUser() {
+	users := []UserModel{}
+	if err := dbConn.Select(&users, "SELECT * FROM users"); err != nil {
+		log.Printf("failed to load users: %+v", err)
+		return
+	}
+	for _, u := range users {
+		userMap.Add(u.ID, u)
+	}
+}
 
 const (
 	listenPort                     = 8080
@@ -162,7 +180,7 @@ func initializeHandler(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to create directory: "+err.Error())
 	// }
 
-	iconMap.Clear()
+	initCache()
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
@@ -248,6 +266,8 @@ func main() {
 	}
 	defer conn.Close()
 	dbConn = conn
+
+	initCache()
 
 	subdomainAddr, ok := os.LookupEnv(powerDNSSubdomainAddressEnvKey)
 	if !ok {
