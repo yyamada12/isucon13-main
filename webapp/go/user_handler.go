@@ -125,14 +125,14 @@ func getIconHandler(c echo.Context) error {
 	// }
 
 	if len(image) == 0 {
-		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return c.File(fallbackImage)
-			} else {
-				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
-			}
-		}
-		hash = sha256.Sum256(image)
+		// if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
+		// if errors.Is(err, sql.ErrNoRows) {
+		return c.File(fallbackImage)
+		// } else {
+		// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
+		// }
+		// }
+		// hash = sha256.Sum256(image)
 	}
 
 	if iconHash != "" && iconHash == fmt.Sprintf("\"%x\"", hash) {
@@ -503,18 +503,19 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		hash = i.hash
 	}
 	if len(image) == 0 {
-		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return User{}, err
-			}
-			image, err = os.ReadFile(fallbackImage)
-			if err != nil {
-				return User{}, err
-			}
-			hash = fallbackImageHash
-		} else {
-			hash = sha256.Sum256(image)
-		}
+		// if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
+		// if !errors.Is(err, sql.ErrNoRows) {
+		// return User{}, err
+		// }
+		// var err error
+		// image, err = os.ReadFile(fallbackImage)
+		// if err != nil {
+		// 	return User{}, err
+		// }
+		hash = fallbackImageHash
+		// } else {
+		// 	hash = sha256.Sum256(image)
+		// }
 	}
 
 	user := User{
