@@ -1,0 +1,7 @@
+.*
+!.gitignore
+/pprof
+/go
+/local
+/webapp/rust
+
