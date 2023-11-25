@@ -8,8 +8,22 @@ limit:           # 5000
 noheaders:       # boolean
 show_footers:    # boolean
 matching_groups: # array
-# - '/icons/.+'
-# - '/history/.+'
+- '/api/user/.+/theme'
+- '/api/user/.+/statistics'
+- '/api/user/.+/icon'
+- '/api/user/.+'
+- '/api/livestream/[^/]+/livecomment/[^/]+/report'
+- '/api/livestream/[^/]+/livecomment'
+- '/api/livestream/[^/]+/reaction'
+- '/api/livestream/[^/]+/report'
+- '/api/livestream/[^/]+/ngwords'
+- '/api/livestream/[^/]+/moderate'
+- '/api/livestream/[^/]+/enter'
+- '/api/livestream/[^/]+/exit'
+- '/api/livestream/[^/]+/statistics'
+- '/api/livestream/[^/]+'
+
+
 filters:         # string
 output:		count,2xx,3xx,4xx,5xx,method,uri,min,p99,max,sum          # string(comma separated)
 pos_file:        # string
