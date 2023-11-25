@@ -90,6 +90,7 @@ var fallbackImageHash [32]byte
 var iconMap = NewSyncMap[Icon]()
 var userMap = NewSyncMap[UserModel]()
 var themeMap = NewSyncMap[ThemeModel]()
+var tagsMap = NewSyncMap[Tag]()
 var livestreamTagsMap = NewSyncListMap[Tag]()
 
 func initCache() {
@@ -100,6 +101,8 @@ func initCache() {
 	themeMap.Clear()
 	loadTheme()
 	livestreamTagsMap.Clear()
+	loadLivestreamTags()
+	tagsMap.Clear()
 	loadTags()
 }
 
@@ -141,7 +144,7 @@ type LiveTag struct {
 	TagName      string `db:"tag_name" json:"tag_name"`
 }
 
-func loadTags() {
+func loadLivestreamTags() {
 	var tags []*LiveTag
 	if err := dbConn.Select(&tags, "SELECT a.*, b.name as tag_name FROM livestream_tags a JOIN tags b ON a.tag_id = b.id"); err != nil {
 		log.Fatalf("failed to load livestream_tags: %+v", err)
@@ -149,6 +152,17 @@ func loadTags() {
 	}
 	for _, t := range tags {
 		livestreamTagsMap.Add(t.LivestreamID, Tag{t.TagID, t.TagName})
+	}
+}
+
+func loadTags() {
+	tags := []Tag{}
+	if err := dbConn.Select(&tags, "SELECT * FROM tags"); err != nil {
+		log.Printf("failed to load tags: %+v", err)
+		return
+	}
+	for _, t := range tags {
+		tagsMap.Add(t.ID, t)
 	}
 }
 
