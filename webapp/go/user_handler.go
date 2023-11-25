@@ -89,6 +89,7 @@ func getIconHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	username := c.Param("username")
+	iconHash := c.Request().Header.Get("If-None-Match")
 
 	tx, err := dbConn.BeginTxx(ctx, nil)
 	if err != nil {
@@ -111,6 +112,11 @@ func getIconHandler(c echo.Context) error {
 		} else {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
 		}
+	}
+
+	hash := sha256.Sum256(image)
+	if iconHash != "" && iconHash == fmt.Sprintf("\"%x\"", hash) {
+		return c.NoContent(http.StatusNotModified)
 	}
 
 	return c.Blob(http.StatusOK, "image/jpeg", image)
