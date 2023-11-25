@@ -139,7 +139,8 @@ func postReactionHandler(c echo.Context) error {
 	}
 
 	ownerID := userIDByLiveStreamMap.Get(reactionModel.LivestreamID)
-	reactionsCountMap.Add(*ownerID, 1)
+	userReactionsCountMap.Add(*ownerID, 1)
+	liveReactionsCountMap.Add(reactionModel.LivestreamID, 1)
 
 	return c.JSON(http.StatusCreated, reaction)
 }

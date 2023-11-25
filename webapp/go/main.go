@@ -120,8 +120,10 @@ var themeMap = NewSyncMap[ThemeModel]()
 var tagsMap = NewSyncMap[Tag]()
 var livestreamTagsMap = NewSyncListMap[Tag]()
 var userIDByLiveStreamMap = NewSyncMap[int64]()
-var reactionsCountMap = NewCountMap()
-var tipsCountMap = NewCountMap()
+var userReactionsCountMap = NewCountMap()
+var userTipsCountMap = NewCountMap()
+var liveReactionsCountMap = NewCountMap()
+var liveTipsCountMap = NewCountMap()
 
 func initCache() {
 	loadFllbackImageHash()
@@ -136,9 +138,11 @@ func initCache() {
 	loadTags()
 	userIDByLiveStreamMap.Clear()
 	loadUserIDByLiveStream()
-	reactionsCountMap.Clear()
+	userReactionsCountMap.Clear()
+	liveReactionsCountMap.Clear()
 	loadReactionsCount()
-	tipsCountMap.Clear()
+	userTipsCountMap.Clear()
+	liveTipsCountMap.Clear()
 	loadTipsCount()
 }
 
@@ -221,7 +225,8 @@ func loadReactionsCount() {
 	}
 	for _, r := range reactions {
 		userID := userIDByLiveStreamMap.Get(r.LivestreamID)
-		reactionsCountMap.Add(*userID, 1)
+		userReactionsCountMap.Add(*userID, 1)
+		liveReactionsCountMap.Add(r.LivestreamID, 1)
 	}
 }
 
@@ -233,7 +238,8 @@ func loadTipsCount() {
 	}
 	for _, c := range comments {
 		userID := userIDByLiveStreamMap.Get(c.LivestreamID)
-		tipsCountMap.Add(*userID, c.Tip)
+		userTipsCountMap.Add(*userID, c.Tip)
+		liveTipsCountMap.Add(c.LivestreamID, c.Tip)
 	}
 }
 

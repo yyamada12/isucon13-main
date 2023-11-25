@@ -251,7 +251,8 @@ func postLivecommentHandler(c echo.Context) error {
 	}
 
 	ownerID := userIDByLiveStreamMap.Get(livecommentModel.LivestreamID)
-	tipsCountMap.Add(*ownerID, livecommentModel.Tip)
+	userTipsCountMap.Add(*ownerID, livecommentModel.Tip)
+	liveTipsCountMap.Add(livecommentModel.LivestreamID, livecommentModel.Tip)
 
 	return c.JSON(http.StatusCreated, livecomment)
 }
