@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -101,9 +102,19 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	}
 	db.SetMaxOpenConns(10)
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	for {
+		err := db.Ping()
+		if err == nil {
+			break
+		}
+		log.Print(err)
+		time.Sleep(time.Second * 2)
 	}
+	log.Print("DB ready!")
+
+	// if err := db.Ping(); err != nil {
+	// 	return nil, err
+	// }
 
 	return db, nil
 }
