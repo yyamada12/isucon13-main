@@ -330,6 +330,17 @@ func initializeHandler(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to create directory: "+err.Error())
 	// }
 
+	req, err := http.NewRequest("POST", "http://192.168.0.13:8080/api/initialize_dns", nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create request: "+err.Error())
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to send request: "+err.Error())
+	}
+	defer resp.Body.Close()
+
 	initCache()
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
