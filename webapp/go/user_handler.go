@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -9,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"time"
 
@@ -299,9 +299,30 @@ func registerHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert user theme: "+err.Error())
 	}
 
-	if out, err := exec.Command("pdnsutil", "add-record", "u.isucon.dev", req.Name, "A", "0", powerDNSSubdomainAddress).CombinedOutput(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, string(out)+": "+err.Error())
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to marshal request body: "+err.Error())
 	}
+
+	httpReq, err := http.NewRequest("POST", "http://192.168.0.13:8080/api/register_dns", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create request: "+err.Error())
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to send request: "+err.Error())
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return echo.NewHTTPError(http.StatusInternalServerError, "received non-OK status code from DNS registration API")
+	}
+
+	// if out, err := exec.Command("pdnsutil", "add-record", "u.isucon.dev", req.Name, "A", "0", powerDNSSubdomainAddress).CombinedOutput(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, string(out)+": "+err.Error())
+	// }
 
 	user, err := fillUserResponse(ctx, tx, userModel)
 	if err != nil {
