@@ -463,8 +463,10 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 			if err != nil {
 				return User{}, err
 			}
+			hash = fallbackImageHash
+		} else {
+			hash = sha256.Sum256(image)
 		}
-		hash = sha256.Sum256(image)
 	}
 
 	user := User{

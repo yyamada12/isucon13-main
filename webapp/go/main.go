@@ -4,6 +4,7 @@ package main
 // sqlx的な参考: https://jmoiron.github.io/sqlx/
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net"
@@ -58,13 +59,24 @@ func (sm *SyncMap[T]) Clear() {
 	sm.m = map[int64]*T{}
 }
 
+var fallbackImageHash [32]byte
 var iconMap = NewSyncMap[Icon]()
 var userMap = NewSyncMap[UserModel]()
 
 func initCache() {
+	loadFllbackImageHash()
 	iconMap.Clear()
 	userMap.Clear()
 	loadUser()
+}
+
+func loadFllbackImageHash() {
+	image, err := os.ReadFile(fallbackImage)
+	if err != nil {
+		log.Printf("failed to load fallback image: %+v", err)
+		return
+	}
+	fallbackImageHash = sha256.Sum256(image)
 }
 
 func loadUser() {
