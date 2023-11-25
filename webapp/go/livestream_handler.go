@@ -176,6 +176,8 @@ func reserveLivestreamHandler(c echo.Context) error {
 		livestreamTagsMap.Add(livestream.ID, t)
 	}
 
+	userIDByLiveStreamMap.Add(livestream.ID, livestream.Owner.ID)
+
 	return c.JSON(http.StatusCreated, livestream)
 }
 

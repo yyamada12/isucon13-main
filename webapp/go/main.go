@@ -32,6 +32,33 @@ type Icon struct {
 	hash [32]byte
 }
 
+type ReactionsCountMap struct {
+	m  map[int64]int64
+	mu sync.RWMutex
+}
+
+func NewReactionsCountMap() *ReactionsCountMap {
+	return &ReactionsCountMap{m: map[int64]int64{}}
+}
+
+func (sm *ReactionsCountMap) Add(key int64, count int64) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m[key] = sm.m[key] + count
+}
+
+func (sm *ReactionsCountMap) Get(key int64) int64 {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.m[key]
+}
+
+func (sm *ReactionsCountMap) Clear() {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.m = map[int64]int64{}
+}
+
 type SyncListMap[T any] struct {
 	m  map[int64][]T
 	mu sync.RWMutex
@@ -92,6 +119,8 @@ var userMap = NewSyncMap[UserModel]()
 var themeMap = NewSyncMap[ThemeModel]()
 var tagsMap = NewSyncMap[Tag]()
 var livestreamTagsMap = NewSyncListMap[Tag]()
+var userIDByLiveStreamMap = NewSyncMap[int64]()
+var reactionsCountMap = NewReactionsCountMap()
 
 func initCache() {
 	loadFllbackImageHash()
@@ -104,6 +133,10 @@ func initCache() {
 	loadLivestreamTags()
 	tagsMap.Clear()
 	loadTags()
+	userIDByLiveStreamMap.Clear()
+	loadUserIDByLiveStream()
+	reactionsCountMap.Clear()
+	loadReactionsCount()
 }
 
 func loadFllbackImageHash() {
@@ -163,6 +196,29 @@ func loadTags() {
 	}
 	for _, t := range tags {
 		tagsMap.Add(t.ID, t)
+	}
+}
+
+func loadUserIDByLiveStream() {
+	livestreams := []LivestreamModel{}
+	if err := dbConn.Select(&livestreams, "SELECT * FROM livestreams"); err != nil {
+		log.Printf("failed to load livestreams: %+v", err)
+		return
+	}
+	for _, l := range livestreams {
+		userIDByLiveStreamMap.Add(l.ID, l.UserID)
+	}
+}
+
+func loadReactionsCount() {
+	reactions := []ReactionModel{}
+	if err := dbConn.Select(&reactions, "SELECT * FROM reactions"); err != nil {
+		log.Printf("failed to load reactions: %+v", err)
+		return
+	}
+	for _, r := range reactions {
+		userID := userIDByLiveStreamMap.Get(r.LivestreamID)
+		reactionsCountMap.Add(*userID, 1)
 	}
 }
 

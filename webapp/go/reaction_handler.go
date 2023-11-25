@@ -138,6 +138,9 @@ func postReactionHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	ownerID := userIDByLiveStreamMap.Get(reactionModel.LivestreamID)
+	reactionsCountMap.Add(*ownerID, 1)
+
 	return c.JSON(http.StatusCreated, reaction)
 }
 
