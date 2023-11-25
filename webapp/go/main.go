@@ -338,6 +338,25 @@ func initializeHandler(c echo.Context) error {
 	})
 }
 
+func initializeDNSHandler(c echo.Context) error {
+	if out, err := exec.Command("../pdns/init_zone.sh").CombinedOutput(); err != nil {
+		c.Logger().Warnf("init_zone.sh failed with err=%s", string(out))
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+
+	// if err := os.RemoveAll("/home/isucon/webapp/icon/"); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to remove directory: "+err.Error())
+	// }
+	// if err := os.Mkdir("/home/isucon/webapp/icon/", 0755); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to create directory: "+err.Error())
+	// }
+
+	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
+	return c.JSON(http.StatusOK, InitializeResponse{
+		Language: "golang",
+	})
+}
+
 func main() {
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
@@ -354,6 +373,7 @@ func main() {
 
 	// 初期化
 	e.POST("/api/initialize", initializeHandler)
+	e.POST("/api/initialize_dns", initializeDNSHandler)
 
 	// top
 	e.GET("/api/tag", getTagHandler)
