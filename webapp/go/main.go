@@ -26,6 +26,8 @@ import (
 	echolog "github.com/labstack/gommon/log"
 
 	_ "net/http/pprof"
+
+	"github.com/felixge/fgprof"
 )
 
 type Icon struct {
@@ -394,6 +396,13 @@ func initializeHandler(c echo.Context) error {
 			fmt.Printf("pprof.pb.gz created: %s", string(out))
 		}
 	}()
+	go func() {
+		if out, err := exec.Command("/home/isucon/local/golang/bin/go", "tool", "pprof", "-seconds=30", "-proto", "-output", "/home/isucon/pprof/fgprof.pb.gz", "localhost:6060/debug/fgprof").CombinedOutput(); err != nil {
+			fmt.Printf("fgprof failed with err=%s, %s", string(out), err)
+		} else {
+			fmt.Printf("fgprof.pb.gz created: %s", string(out))
+		}
+	}()
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
@@ -421,6 +430,7 @@ func initializeDNSHandler(c echo.Context) error {
 }
 
 func main() {
+	http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()

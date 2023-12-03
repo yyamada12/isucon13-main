@@ -16,6 +16,7 @@ rotate_log /var/log/nginx/access.log
 rotate_log /var/log/nginx/error.log
 rotate_log /var/log/mysql/slow.log
 rotate_log ~/pprof/pprof.pb.gz
+rotate_log ~/pprof/fgprof.pb.gz
 
 
 # build go app
