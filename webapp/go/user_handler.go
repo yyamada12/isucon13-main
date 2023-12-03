@@ -86,24 +86,29 @@ type PostIconResponse struct {
 }
 
 func getIconHandler(c echo.Context) error {
-	ctx := c.Request().Context()
+	// ctx := c.Request().Context()
 
 	username := c.Param("username")
 	iconHash := c.Request().Header.Get("If-None-Match")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	user := userByNameMap.Get(username)
+	if user == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 	}
-	defer tx.Rollback()
 
-	var user UserModel
-	if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
-		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
-	}
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+
+	// var user UserModel
+	// if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
+	// 	}
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
+	// }
 
 	var image []byte
 	var hash [32]byte
@@ -289,6 +294,7 @@ func registerHandler(c echo.Context) error {
 
 	userModel.ID = userID
 	userMap.Add(userModel.ID, userModel)
+	userByNameMap.Add(userModel.Name, userModel)
 
 	themeModel := ThemeModel{
 		UserID:   userID,

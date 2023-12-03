@@ -89,51 +89,53 @@ func (sm *SyncListMap[T]) Clear() {
 	sm.m = map[int64][]T{}
 }
 
-type SyncMap[T any] struct {
-	m  map[int64]*T
+type SyncMap[K comparable, T any] struct {
+	m  map[K]*T
 	mu sync.RWMutex
 }
 
-func NewSyncMap[T any]() *SyncMap[T] {
-	return &SyncMap[T]{m: map[int64]*T{}}
+func NewSyncMap[K comparable, T any]() *SyncMap[K, T] {
+	return &SyncMap[K, T]{m: map[K]*T{}}
 }
 
-func (sm *SyncMap[T]) Add(key int64, value T) {
+func (sm *SyncMap[K, T]) Add(key K, value T) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	sm.m[key] = &value
 }
 
-func (sm *SyncMap[T]) Get(key int64) *T {
+func (sm *SyncMap[K, T]) Get(key K) *T {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	return sm.m[key]
 }
 
-func (sm *SyncMap[T]) Clear() {
+func (sm *SyncMap[K, T]) Clear() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-	sm.m = map[int64]*T{}
+	sm.m = map[K]*T{}
 }
 
 var fallbackImageHash [32]byte
-var iconMap = NewSyncMap[Icon]()
-var userMap = NewSyncMap[UserModel]()
-var themeMap = NewSyncMap[ThemeModel]()
-var tagsMap = NewSyncMap[Tag]()
+var iconMap = NewSyncMap[int64, Icon]()
+var userMap = NewSyncMap[int64, UserModel]()
+var userByNameMap = NewSyncMap[string, UserModel]()
+var themeMap = NewSyncMap[int64, ThemeModel]()
+var tagsMap = NewSyncMap[int64, Tag]()
 var livestreamTagsMap = NewSyncListMap[Tag]()
-var userIDByLiveStreamMap = NewSyncMap[int64]()
+var userIDByLiveStreamMap = NewSyncMap[int64, int64]()
 var userReactionsCountMap = NewCountMap()
 var userTipsCountMap = NewCountMap()
 var liveReactionsCountMap = NewCountMap()
 var liveTipsCountMap = NewCountMap()
 var ownersNGWordsMap = NewSyncListMap[NGWord]()
-var livestreamMap = NewSyncMap[LivestreamModel]()
+var livestreamMap = NewSyncMap[int64, LivestreamModel]()
 
 func initCache() {
 	loadFllbackImageHash()
 	iconMap.Clear()
 	userMap.Clear()
+	userByNameMap.Clear()
 	loadUser()
 	themeMap.Clear()
 	loadTheme()
@@ -201,6 +203,7 @@ func loadUser() {
 	}
 	for _, u := range users {
 		userMap.Add(u.ID, u)
+		userByNameMap.Add(u.Name, u)
 	}
 }
 
