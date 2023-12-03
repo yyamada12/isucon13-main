@@ -9,9 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -139,10 +137,10 @@ func getIconHandler(c echo.Context) error {
 		return c.NoContent(http.StatusNotModified)
 	}
 
-	err = os.WriteFile("/home/isucon/webapp/icon/"+strconv.Itoa(int(user.ID)), image, 0666)
-	if err != nil {
-		fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
-	}
+	// err = os.WriteFile("/home/isucon/webapp/icon/"+strconv.Itoa(int(user.ID)), image, 0666)
+	// if err != nil {
+	// 	fmt.Println("NOOOOOOOOOOOOOOOOOOOOO, write icon error", err)
+	// }
 
 	return c.Blob(http.StatusOK, "image/jpeg", image)
 }
