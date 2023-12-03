@@ -388,7 +388,7 @@ func initializeHandler(c echo.Context) error {
 	initCache()
 
 	go func() {
-		if out, err := exec.Command("go", "tool", "pprof", "-seconds=30", "-proto", "-output", "/home/isucon/pprof/pprof.pb.gz", "localhost:6060/debug/pprof/profile").CombinedOutput(); err != nil {
+		if out, err := exec.Command("/home/isucon/local/golang", "tool", "pprof", "-seconds=30", "-proto", "-output", "/home/isucon/pprof/pprof.pb.gz", "localhost:6060/debug/pprof/profile").CombinedOutput(); err != nil {
 			fmt.Printf("pprof failed with err=%s, %s", string(out), err)
 		} else {
 			fmt.Printf("pprof.pb.gz created: %s", string(out))
