@@ -128,6 +128,7 @@ var userTipsCountMap = NewCountMap()
 var liveReactionsCountMap = NewCountMap()
 var liveTipsCountMap = NewCountMap()
 var ownersNGWordsMap = NewSyncListMap[NGWord]()
+var livestreamMap = NewSyncMap[LivestreamModel]()
 
 func initCache() {
 	loadFllbackImageHash()
@@ -150,6 +151,18 @@ func initCache() {
 	loadTipsCount()
 	ownersNGWordsMap.Clear()
 	loadOwnersNGWords()
+	livestreamMap.Clear()
+	loadLivestreams()
+}
+
+func loadLivestreams() {
+	livestreams := []LivestreamModel{}
+	if err := dbConn.Select(&livestreams, "SELECT * FROM livestreams"); err != nil {
+		log.Fatalf("failed to load livestreams: %+v", err)
+	}
+	for _, l := range livestreams {
+		livestreamMap.Add(l.ID, l)
+	}
 }
 
 func loadOwnersNGWords() {

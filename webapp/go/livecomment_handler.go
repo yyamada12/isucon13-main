@@ -457,9 +457,15 @@ func fillLivecommentResponse(ctx context.Context, tx *sqlx.Tx, livecommentModel 
 	}
 
 	livestreamModel := LivestreamModel{}
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livecommentModel.LivestreamID); err != nil {
-		return Livecomment{}, err
+	cachedLive := livestreamMap.Get(livecommentModel.LivestreamID)
+	if cachedLive != nil {
+		livestreamModel = *cachedLive
+	} else {
+		if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livecommentModel.LivestreamID); err != nil {
+			return Livecomment{}, err
+		}
 	}
+
 	livestream, err := fillLivestreamResponse(ctx, tx, livestreamModel)
 	if err != nil {
 		return Livecomment{}, err
